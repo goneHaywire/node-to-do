@@ -8,7 +8,6 @@ export const getProjects = (req: Request, res: Response, next: NextFunction) =>
   pipe(
     TE.tryCatch(() => db.project.findMany(), E.toError),
     TE.match(
-      // res.sendStatus(500).send(err),
       (err) => next(new ApiError(500, err)),
       (result) => res.send(result),
     ),
