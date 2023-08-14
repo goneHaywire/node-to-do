@@ -1,54 +1,49 @@
-import { Request, Response, Router } from "express";
-import { flow, pipe } from "fp-ts/function";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import { E, O } from "../utils/fp-ts";
-import { applyMiddleware } from "../utils/middleware";
-import { split, prop } from "ramda";
-import { ApiError } from "../utils/error";
+import { NextFunction, Request, Response, Router } from "express"
+import { flow, pipe } from "fp-ts/function"
+import jwt, { JwtPayload } from "jsonwebtoken"
+import { E, O } from "../utils/fp-ts"
+import { split, prop, __ } from "ramda"
+import { apiError, withHandler, withMessage } from "../utils/error"
 
 const getAuthCookie = (req: Request) =>
-  pipe(req.cookies.token as string, O.fromNullable);
+  pipe(req.cookies.token as string, O.fromNullable)
 
 const getAuthHeader = (req: Request) =>
   pipe(
     req.headers.authorization,
     O.fromNullable,
-    O.map(flow(split(" "), prop(0)))
-  );
+    O.map(flow(split(" "), prop(0))),
+  )
 
-export const isAuth = (req: Request, res: Response, next: Function) =>
+export const isAuth = (req: Request, res: Response, next: NextFunction) =>
   pipe(
     getAuthCookie(req),
-    E.fromOption(() => new ApiError(401)),
+    E.fromOption(() => pipe(apiError("UNAUTHORIZED"))),
     E.chain((token) =>
       E.tryCatch(
         () => jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload,
-        () => new ApiError(401, undefined, (res) => res.clearCookie("token"))
-      )
+        () =>
+          pipe(
+            apiError("UNAUTHORIZED"),
+            withHandler((res) => res.clearCookie("token")),
+          ),
+      ),
     ),
     E.tap((token) => {
-      req.userId = token.id;
-      return E.right(token);
+      req.userId = token.id
+      return E.right(token)
     }),
     E.match(
       (e) => next(e),
-      () => next()
-    )
-  );
+      () => next(),
+    ),
+  )
 
-export const isGuest = (req: Request, res: Response, next: Function) =>
+export const isGuest = (req: Request, res: Response, next: NextFunction) =>
   pipe(
     getAuthCookie(req),
     O.match(
       () => next(),
-      () => next(new ApiError(403))
-    )
-  );
-
-export const isOwner = pipe(
-  Router(),
-  applyMiddleware(isAuth),
-  applyMiddleware((req: Request, res: Response) =>
-    res.send("do ktheje 200 po te bejn match userIds")
+      () => next(pipe(apiError("FORBIDDEN"), withMessage("Already logged in"))),
+    ),
   )
-);
