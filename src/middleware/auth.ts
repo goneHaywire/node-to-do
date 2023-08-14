@@ -12,12 +12,13 @@ const getAuthHeader = (req: Request) =>
   pipe(
     req.headers.authorization,
     O.fromNullable,
-    O.map(flow(split(" "), prop(0))),
+    O.map(flow(split(" "), prop(1))),
   )
 
 export const isAuth = (req: Request, res: Response, next: NextFunction) =>
   pipe(
     getAuthCookie(req),
+    // getAuthHeader(req),
     E.fromOption(() => pipe(apiError("UNAUTHORIZED"))),
     E.chain((token) =>
       E.tryCatch(
@@ -42,6 +43,7 @@ export const isAuth = (req: Request, res: Response, next: NextFunction) =>
 export const isGuest = (req: Request, res: Response, next: NextFunction) =>
   pipe(
     getAuthCookie(req),
+    // getAuthHeader(req),
     O.match(
       () => next(),
       () => next(pipe(apiError("FORBIDDEN"), withMessage("Already logged in"))),

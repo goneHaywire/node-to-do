@@ -16,7 +16,7 @@ model Project {
         description String  @db.VarChar(255)
         tasks       Task[]
         isPublic    Boolean @default(true)
-        User        User?   @relation(fields: [userId], references: [id])
+        User        User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
         userId      String?
         version     String  @default("0.0")
 
@@ -28,10 +28,10 @@ model Task {
         id          String   @id @default(uuid())
         title       String
         description String   @db.VarChar(255)
-        completed   Boolean
+        completed   Boolean  @default(false)
         createdAt   DateTime @default(now())
         updatedAt   DateTime @updatedAt
-        Project     Project? @relation(fields: [projectId], references: [id])
+        Project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
         projectId   String?
 }
 

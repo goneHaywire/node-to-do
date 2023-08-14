@@ -69,5 +69,15 @@ export const prismaErrorHandlerModule = (
         )
         : E.right(e),
     ),
+    E.chain((e) =>
+      e.code === "P2003"
+        ? E.left(
+          pipe(
+            apiError("BAD_REQUEST"),
+            withMessage("Foreign Key Constraint Error"),
+          ),
+        )
+        : E.right(e),
+    ),
   )
 }

@@ -1,16 +1,18 @@
 import { Request, Response, Router } from "express"
 import { isAuth } from "../middleware/auth"
+import {
+  createTask,
+  deleteTask,
+  getTask,
+  getTasks,
+  updateTask,
+} from "../handlers/tasks"
+import { validateBody } from "../middleware/validation"
+import { createTaskSchema, updateTaskSchema } from "../models/task"
 
 export const taskRouter = Router()
-  .get("/tasks", () => { })
-  .get("/tasks/:id", (req, res) => {
-    res.sendStatus(200)
-  })
-  .get("/users/:id", (req, res) => {
-    res.sendStatus(200)
-  })
-  .post("/tasks", isAuth, () => { })
-  .put("/tasks/:id", (req: Request, res: Response) => {
-    res.sendStatus(200)
-  })
-  .delete("/tasks/:id", () => { })
+  .get("/tasks", getTasks)
+  .get("/tasks/:id", getTask)
+  .post("/tasks", isAuth, validateBody(createTaskSchema), createTask)
+  .put("/tasks/:id", isAuth, validateBody(updateTaskSchema), updateTask)
+  .delete("/tasks/:id", isAuth, deleteTask)
