@@ -1,12 +1,16 @@
 import { NextFunction, Request, Response } from "express"
-import { flow, pipe } from "fp-ts/lib/function"
+import { pipe } from "fp-ts/lib/function"
 import db from "../db"
-import { E, O, TE } from "../utils/fp-ts"
+import { E, TE } from "../utils/fp-ts"
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library"
 import { apiError, toPrismaErr, withMessage } from "../utils/error"
 
-export const getProjects = (req: Request, res: Response, next: NextFunction) =>
-  pipe(
+export const getProjects = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) =>
+  await pipe(
     TE.tryCatch(() => db.project.findMany(), E.toError),
     TE.match(
       (err) => next(err),
@@ -14,17 +18,18 @@ export const getProjects = (req: Request, res: Response, next: NextFunction) =>
     ),
   )()
 
-export const getProject = (req: Request, res: Response, next: NextFunction) =>
-  pipe(
-    req.params.id,
-    TE.of,
-    TE.map(O.fromNullable),
-    TE.chain(TE.fromOption(() => apiError("NOT_FOUND"))),
-    TE.chainW((id) =>
-      TE.tryCatch(
-        () => db.project.findUniqueOrThrow({ where: { id } }),
-        toPrismaErr,
-      ),
+export const getProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) =>
+  await pipe(
+    TE.tryCatch(
+      () => db.project.findUnique({ where: { id: req.params.id } }),
+      () => apiError("SERVER_ERROR"),
+    ),
+    TE.chain((maybeUser) =>
+      maybeUser ? TE.right(maybeUser) : TE.left(apiError("NOT_FOUND")),
     ),
     TE.match(
       (err) => next(err),
@@ -32,14 +37,13 @@ export const getProject = (req: Request, res: Response, next: NextFunction) =>
     ),
   )()
 
-export const createProject = (
+export const createProject = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) =>
-  pipe(
-    req.body,
-    TE.of,
+  await pipe(
+    TE.of(req.body),
     TE.chain((data) =>
       TE.tryCatch(
         () =>
@@ -64,8 +68,7 @@ export const updateProject = async (
   next: NextFunction,
 ) =>
   await pipe(
-    req.body,
-    TE.of,
+    TE.of(req.body),
     TE.chain((data) =>
       TE.tryCatch(
         () =>
@@ -99,19 +102,15 @@ export const deleteProject = async (
   next: NextFunction,
 ) =>
   await pipe(
-    req.params.id,
-    TE.of,
-    TE.chain((id) =>
-      TE.tryCatch(
-        () =>
-          db.project.delete({
-            where: {
-              id,
-              userId: req.userId,
-            },
-          }),
-        toPrismaErr,
-      ),
+    TE.tryCatch(
+      () =>
+        db.project.delete({
+          where: {
+            id: req.params.id,
+            userId: req.userId,
+          },
+        }),
+      toPrismaErr,
     ),
     TE.match(
       (e) => next(e),
