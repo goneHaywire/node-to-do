@@ -1,12 +1,24 @@
-version: '3.1'
+version: "3.1"
 
 services:
-
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    volumes:
+      - "/app/node_modules"
+    env_file: prod.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db/node_to_do
   db:
     image: postgres
     restart: always
     ports:
-    5432: 5432
+      - "5432:5432"
+    env_file: prod.env
     environment:
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: node_to_do
+      - DATABASE_URL=postgresql://postgres:password@db/node_to_do
